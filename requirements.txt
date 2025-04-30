@@ -1,0 +1,13 @@
+numpy
+pandas
+scikit-learn
+tensorflow
+transformers
+nltk
+spacy
+textstat
+matplotlib
+seaborn
+tqdm
+flask
+gradio

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon Review Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #e47911;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            height: 150px;
+            margin-bottom: 20px;
+            font-family: inherit;
+        }
+        button {
+            background-color: #e47911;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #d16810;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            display: none;
+        }
+        .result-section {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .result-section h3 {
+            color: #e47911;
+            margin-bottom: 5px;
+        }
+        .positive {
+            color: #007600;
+        }
+        .negative {
+            color: #b12704;
+        }
+        .neutral {
+            color: #565959;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #e47911;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Amazon Product Review Analysis</h1>
+        <p>Enter a product review below to analyze its sentiment, extract aspects, predict helpfulness, and generate a summary.</p>
+        
+        <textarea id="reviewText" placeholder="Enter your product review here..."></textarea>
+        <button onclick="analyzeReview()">Analyze Review</button>
+        
+        <div id="loader" class="loader"></div>
+        
+        <div id="results">
+            <div class="result-section">
+                <h3>Sentiment</h3>
+                <p id="sentiment"></p>
+                <p id="sentiment-scores"></p>
+            </div>
+            
+            <div class="result-section">
+                <h3>Aspect Sentiments</h3>
+                <div id="aspects"></div>
+            </div>
+            
+            <div class="result-section">
+                <h3>Helpfulness</h3>
+                <p id="helpfulness"></p>
+            </div>
+            
+            <div class="result-section">
+                <h3>Summary</h3>
+                <p id="summary"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function analyzeReview() {
+            const reviewText = document.getElementById('reviewText').value.trim();
+            
+            if (!reviewText) {
+                alert('Please enter a review to analyze.');
+                return;
+            }
+            
+            // Show loader
+            document.getElementById('loader').style.display = 'block';
+            // Hide previous results
+            document.getElementById('results').style.display = 'none';
+            
+            // Send API request
+            fetch('/api/analyze_review', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ review: reviewText }),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Hide loader
+                document.getElementById('loader').style.display = 'none';
+                
+                // Display results
+                displayResults(data);
+                
+                // Show results container
+                document.getElementById('results').style.display = 'block';
+            })
+            .catch(error => {
+                // Hide loader
+                document.getElementById('loader').style.display = 'none';
+                
+                alert('Error analyzing review: ' + error.message);
+            });
+        }
+        
+        function displayResults(data) {
+            // Display sentiment
+            if (data.analysis.sentiment) {
+                const sentiment = data.analysis.sentiment.label;
+                document.getElementById('sentiment').textContent = sentiment.charAt(0).toUpperCase() + sentiment.slice(1);
+                document.getElementById('sentiment').className = sentiment.toLowerCase();
+                
+                if (data.analysis.sentiment.scores) {
+                    const scores = data.analysis.sentiment.scores;
+                    let scoresText = 'Scores: ';
+                    for (const [key, value] of Object.entries(scores)) {
+                        scoresText += `${key}: ${value.toFixed(2)} `;
+                    }
+                    document.getElementById('sentiment-scores').textContent = scoresText;
+                }
+            }
+            
+            // Display aspects
+            if (data.analysis.aspects) {
+                const aspectsContainer = document.getElementById('aspects');
+                aspectsContainer.innerHTML = '';
+                
+                for (const [aspect, value] of Object.entries(data.analysis.aspects)) {
+                    const aspectSentiment = typeof value === 'object' ? value.sentiment : value;
+                    
+                    const aspectElement = document.createElement('p');
+                    aspectElement.innerHTML = `<strong>${aspect}:</strong> <span class="${aspectSentiment.toLowerCase()}">${aspectSentiment}</span>`;
+                    aspectsContainer.appendChild(aspectElement);
+                }
+            }
+            
+            // Display helpfulness
+            if (data.analysis.helpfulness) {
+                const helpfulness = data.analysis.helpfulness;
+                let helpfulnessText = helpfulness.is_helpful ? 'Likely helpful' : 'May not be helpful';
+                
+                if (helpfulness.probability !== undefined) {
+                    helpfulnessText += ` (confidence: ${helpfulness.probability.toFixed(2)})`;
+                }
+                
+                document.getElementById('helpfulness').textContent = helpfulnessText;
+            }
+            
+            // Display summary
+            if (data.analysis.summary) {
+                document.getElementById('summary').textContent = data.analysis.summary;
+            }
+        }
+    </script>
+</body>
+</html>
