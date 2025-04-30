@@ -6,7 +6,7 @@ import spacy
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
-
+nltk.download('vader_lexicon')
 # Download SpaCy model
 spacy.cli.download('en_core_web_sm')
 

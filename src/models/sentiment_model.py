@@ -246,6 +246,7 @@ class SentimentAnalysisModel:
         
         return predicted_labels, predictions
     
+    # In aspect_model.py and sentiment_model.py, find the save_model method
     def save_model(self, model_path, tokenizer_path):
         """
         Save model and tokenizer
@@ -256,8 +257,9 @@ class SentimentAnalysisModel:
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
         
-        # Save model
-        self.model.save(model_path)
+        # Create a SavedModel directory instead of .keras file
+        saved_model_dir = model_path
+        self.model.save(saved_model_dir, save_format='tf')
         
         # Save tokenizer and label encoder
         with open(tokenizer_path, 'wb') as handle:
@@ -269,9 +271,10 @@ class SentimentAnalysisModel:
                 'embedding_dim': self.embedding_dim
             }, handle)
         
-        print(f"Model saved to {model_path}")
+        print(f"Model saved to {saved_model_dir}")
         print(f"Tokenizer saved to {tokenizer_path}")
-    
+
+    # And update the load_model method
     def load_model(self, model_path, tokenizer_path):
         """
         Load model and tokenizer

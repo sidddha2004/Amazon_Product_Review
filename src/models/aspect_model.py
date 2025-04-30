@@ -8,7 +8,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.preprocessing import LabelEncoder
 import spacy
 from collections import Counter
-
+import os
 class AspectBasedSentimentModel:
     def __init__(self, max_words=10000, max_sequence_length=200, embedding_dim=100):
         self.max_words = max_words
@@ -246,41 +246,55 @@ class AspectBasedSentimentModel:
         
         return predicted_labels, predictions
     
+    # In aspect_model.py and sentiment_model.py, find the save_model method
     def save_model(self, model_path, tokenizer_path):
         """
-        Save model, tokenizers, and aspect categories
+        Save model and tokenizer
         """
-        # Save model
-        self.model.save(model_path)
+        if self.model is None:
+            raise ValueError("No model to save. Train a model first.")
+            
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
         
-        # Save tokenizers and aspect categories
-        import pickle
+        # Create a SavedModel directory instead of .keras file
+        saved_model_dir = model_path
+        self.model.save(saved_model_dir, save_format='tf')
+        
+        # Save tokenizer and label encoder
         with open(tokenizer_path, 'wb') as handle:
             pickle.dump({
-                'text_tokenizer': self.text_tokenizer,
-                'aspect_tokenizer': self.aspect_tokenizer,
+                'tokenizer': self.tokenizer, 
                 'label_encoder': self.label_encoder,
-                'aspect_categories': self.aspect_categories
+                'max_words': self.max_words,
+                'max_sequence_length': self.max_sequence_length,
+                'embedding_dim': self.embedding_dim
             }, handle)
         
-        print(f"Model saved to {model_path}")
-        print(f"Tokenizers and aspects saved to {tokenizer_path}")
-    
+        print(f"Model saved to {saved_model_dir}")
+        print(f"Tokenizer saved to {tokenizer_path}")
+
+    # And update the load_model method
     def load_model(self, model_path, tokenizer_path):
         """
-        Load model, tokenizers, and aspect categories
+        Load model and tokenizer
         """
         # Load model
         self.model = tf.keras.models.load_model(model_path)
         
-        # Load tokenizers and aspect categories
-        import pickle
+        # Load tokenizer and label encoder
         with open(tokenizer_path, 'rb') as handle:
             saved_data = pickle.load(handle)
-            self.text_tokenizer = saved_data['text_tokenizer']
-            self.aspect_tokenizer = saved_data['aspect_tokenizer']
+            self.tokenizer = saved_data['tokenizer']
             self.label_encoder = saved_data['label_encoder']
-            self.aspect_categories = saved_data['aspect_categories']
+            
+            # Load parameters if available
+            if 'max_words' in saved_data:
+                self.max_words = saved_data['max_words']
+            if 'max_sequence_length' in saved_data:
+                self.max_sequence_length = saved_data['max_sequence_length']
+            if 'embedding_dim' in saved_data:
+                self.embedding_dim = saved_data['embedding_dim']
         
         print(f"Model loaded from {model_path}")
-        print(f"Tokenizers and aspects loaded from {tokenizer_path}")
+        print(f"Tokenizer loaded from {tokenizer_path}")

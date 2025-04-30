@@ -142,7 +142,15 @@ def train_sentiment_model(train_df, val_df, test_df, model_dir):
         y_test = np.zeros(len(X_test))  # Fallback
     
     # Build and train model
-    num_classes = len(np.unique(y_train))
+# Fix this in train_models.py
+    if len(y_train.shape) > 1:
+        # Already one-hot encoded
+        num_classes = y_train.shape[1]
+    else:
+        # Not yet one-hot encoded
+        num_classes = len(np.unique(y_train))
+
+    print(f"Training with {num_classes} sentiment classes")    
     print(f"Training with {num_classes} sentiment classes")
     
     model = sentiment_model.build_cnn_lstm_model(num_classes)
